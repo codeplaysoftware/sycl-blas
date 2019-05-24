@@ -1,4 +1,3 @@
-
 #/***************************************************************************
 # *
 # *  @license
@@ -23,10 +22,26 @@
 # *  @filename CMakeLists.txt
 # *
 # **************************************************************************/
-#blas2
-generate_blas_ternary_objects(blas2 gemv)
-generate_blas_ternary_objects(blas2 ger)
-generate_blas_ternary_objects(blas2 symv)
-generate_blas_ternary_objects(blas2 syr2)
-generate_blas_binary_objects(blas2 syr)
-generate_blas_binary_objects(blas2 trmv)
+
+include(FindPackageHandleStandardArgs)
+
+find_package(BLAS)
+find_package(OpenBLAS)
+find_package(Threads REQUIRED)
+
+if(OpenBLAS_DIR)
+    set(SystemBLAS_LIBRARIES ${OpenBLAS_LIBRARIES})
+    set(SystemBLAS_INCLUDE_DIRS ${OpenBLAS_INCLUDE_DIRS})
+elseif(BLAS_FOUND)
+    set(SystemBLAS_LIBRARIES ${BLAS_LIBRARIES} ${BLAS_LINKER_FLAGS})
+endif()
+message(STATUS "${SystemBLAS_INCLUDE_DIRS}")
+find_package_handle_standard_args(SystemBLAS REQUIRED_VARS SystemBLAS_LIBRARIES)
+
+if(SystemBLAS_FOUND AND NOT TARGET SystemBLAS::BLAS)
+    add_library(SystemBLAS::BLAS INTERFACE IMPORTED)
+    set_target_properties(SystemBLAS::BLAS PROPERTIES
+        INTERFACE_LINK_LIBRARIES "${SystemBLAS_LIBRARIES};Threads::Threads"
+        INTERFACE_INCLUDE_DIRECTORIES "${SystemBLAS_INCLUDE_DIRS}"
+    )
+endif()

@@ -92,3 +92,7 @@ api_doc/
 
 # Visual studio code files
 .vscode/
+
+# QtCreator
+CMakeLists.txt.user*
+*.autosave

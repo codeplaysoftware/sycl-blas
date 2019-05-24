@@ -22,6 +22,7 @@
  *  @filename dot.cpp.in
  *
  **************************************************************************/
+
 #include "container/sycl_iterator.hpp"
 #include "executors/executor_sycl.hpp"
 #include "executors/kernel_constructor.hpp"
@@ -34,18 +35,27 @@
 namespace blas {
 namespace internal {
 
+{% for policy in policy_types -%}
+{% for index in index_types -%}
+{% for data in data_types -%}
+
 /**
  * \brief Compute the inner product of two vectors with extended precision
     accumulation.
- * @param Executor<${EXECUTOR}> ex
+ * @param Executor<PolicyHandler<{{policy}}>> ex
  * @param _vx  VectorView
  * @param _incx Increment in X axis
  * @param _vx  VectorView
  * @param _incy Increment in Y axis
  */
-template typename Executor<${EXECUTOR}>::policy_t::event_t _dot(
-    Executor<${EXECUTOR}> &ex, ${INDEX_TYPE} _N, ${container_t0} _vx,
-    ${INCREMENT_TYPE} _incx, ${container_t1} _vy, ${INCREMENT_TYPE} _incy,
-    ${container_t2} _rs);
+template typename Executor<PolicyHandler<{{policy}}>>::policy_t::event_t _dot(
+    Executor<PolicyHandler<{{policy}}>> &ex, {{index}} _N, BufferIterator<{{data}}, {{policy}}> _vx,
+    {{index}} _incx, BufferIterator<{{data}}, {{policy}}> _vy, {{index}} _incy,
+    BufferIterator<{{data}}, {{policy}}> _rs);
+
+{% endfor -%}
+{% endfor -%}
+{% endfor -%}
+
 }  // namespace internal
 }  // namespace blas

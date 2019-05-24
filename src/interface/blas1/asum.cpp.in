@@ -22,6 +22,7 @@
  *  @filename _asum.cpp.in
  *
  **************************************************************************/
+
 #include "container/sycl_iterator.hpp"
 #include "executors/executor_sycl.hpp"
 #include "executors/kernel_constructor.hpp"
@@ -33,15 +34,24 @@
 
 namespace blas {
 namespace internal {
+
+{% for policy in policy_types -%}
+{% for index in index_types -%}
+{% for data in data_types -%}
+
 /*
  * \brief _asum Takes the sum of the absolute values
- * @param Executor<${ExecutorType}> ex
+ * @param Executor<{{executor}}> ex
  * @param _vx  VectorView
  * @param _incx Increment in X axis
  */
-template typename Executor<${EXECUTOR}>::policy_t::event_t _asum(
-    Executor<${EXECUTOR}> &ex, ${INDEX_TYPE} _N, ${container_t0} _vx,
-    ${INCREMENT_TYPE} _incx, ${container_t1} _rs);
+template typename Executor<PolicyHandler<{{policy}}>>::policy_t::event_t _asum(
+    Executor<PolicyHandler<{{policy}}>> &ex, {{index}} _N, BufferIterator<{{data}}, {{policy}}> _vx,
+    {{index}} _incx, BufferIterator<{{data}}, {{policy}}> _rs);
+
+{% endfor -%}
+{% endfor -%}
+{% endfor -%}
 
 }  // namespace internal
 }  // namespace blas

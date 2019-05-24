@@ -22,6 +22,7 @@
  *  @filename nrm2.cpp.in
  *
  **************************************************************************/
+
 #include "container/sycl_iterator.hpp"
 #include "executors/executor_sycl.hpp"
 #include "executors/kernel_constructor.hpp"
@@ -34,14 +35,23 @@
 namespace blas {
 namespace internal {
 
+{% for policy in policy_types -%}
+{% for index in index_types -%}
+{% for data in data_types -%}
+
 /**
  * \brief NRM2 Returns the euclidian norm of a vector
- * @param Executor<${EXECUTOR}> ex
+ * @param Executor<PolicyHandler<{{policy}}>> ex
  * @param _vx  VectorView
  * @param _incx Increment in X axis
  */
-template typename Executor<${EXECUTOR}>::policy_t::event_t _nrm2(
-    Executor<${EXECUTOR}> &ex, ${INDEX_TYPE} _N, ${container_t0} _vx,
-    ${INCREMENT_TYPE} _incx, ${container_t1} _rs);
+template typename Executor<PolicyHandler<{{policy}}>>::policy_t::event_t _nrm2(
+    Executor<PolicyHandler<{{policy}}>> &ex, {{index}} _N, BufferIterator<{{data}}, {{policy}}> _vx,
+    {{index}} _incx, BufferIterator<{{data}}, {{policy}}> _rs);
+
+{% endfor -%}
+{% endfor -%}
+{% endfor -%}
+
 }  // namespace internal
 }  // namespace blas

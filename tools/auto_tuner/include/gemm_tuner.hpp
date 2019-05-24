@@ -33,7 +33,7 @@
 #include <numeric>
 
 #include "reference_gemm.hpp"
-#include "sycl_blas.hpp"
+#include "sycl_blas.h"
 
 using namespace cl::sycl;
 using namespace blas;

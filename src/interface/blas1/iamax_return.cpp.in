@@ -22,6 +22,7 @@
  *  @filename iamax_return.cpp.in
  *
  **************************************************************************/
+
 #include "container/sycl_iterator.hpp"
 #include "executors/executor_sycl.hpp"
 #include "executors/kernel_constructor.hpp"
@@ -34,14 +35,22 @@
 namespace blas {
 namespace internal {
 
+{% for policy in policy_types -%}
+{% for index in index_types -%}
+{% for data in data_types -%}
+
 /**
  * \brief _iamax finds the index of the first element having maximum
  * @param _vx  VectorView
  * @param _incx Increment in X axis
- * @param Executor<${EXECUTOR}> ex
+ * @param Executor<PolicyHandler<{{policy}}>> ex
  */
-template ${INDEX_TYPE} _iamax(Executor<${EXECUTOR}> &ex, ${INDEX_TYPE} _N,
-                              ${container_t0} _vx, ${INCREMENT_TYPE} _incx);
+template {{index}} _iamax(Executor<PolicyHandler<{{policy}}>> &ex, {{index}} _N,
+                              BufferIterator<{{data}}, {{policy}}> _vx, {{index}} _incx);
+
+{% endfor -%}
+{% endfor -%}
+{% endfor -%}
 
 }  // namespace internal
 }  // namespace blas

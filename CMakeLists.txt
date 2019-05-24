@@ -22,77 +22,79 @@
 # *  @filename CMakeLists.txt
 # *
 # **************************************************************************/
-cmake_minimum_required (VERSION 3.2.2)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+cmake_minimum_required(VERSION 3.4.3)
+project(SYCL-BLAS LANGUAGES CXX)
 
-if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
-  project(sycl-blas VERSION 0.1.0)
-else()
-  project(sycl-blas VERSION 0.1.0 DESCRIPTION "sycl-blas library")
-endif()
-
-set(COMPUTECPP_SDK_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/external/computecpp-sdk/include)
-set(CBLAS_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/external/cblas)
-set(SYCLBLAS_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(SYCLBLAS_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(SYCLBLAS_SRC_GENERATOR ${CMAKE_CURRENT_SOURCE_DIR}/python_generator)
-set(SYCLBLAS_GENERATED_SRC ${CMAKE_CURRENT_BINARY_DIR}/generated_src)
-set(CLARA_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/external/clara)
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/computecpp-sdk/cmake/Modules)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/external/sample/cmake)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -w -Wall -Wno-long-long -pedantic")
-list(APPEND COMPUTECPP_USER_FLAGS "-O3" "-fsycl-split-modules=20" "-mllvm" "-inline-threshold=10000" "-no-serial-memop")
-list(APPEND THIRD_PARTIES_INCLUDE ${ComputeCpp_INCLUDE_DIRS} ${COMPUTECPP_SDK_INCLUDE} ${CLARA_INCLUDE} ${CBLAS_INCLUDE})
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(OpenCL REQUIRED)
-find_package(ComputeCpp REQUIRED)
-include(ConfigureSYCLBLAS)
-find_package(PythonInterp 2.7 REQUIRED)
-include(CmakeFunctionHelper)
-
-#by default always inlining the kernels
+option(BUILD_BENCHMARKS "Build the benchmarks" OFF)
+option(BUILD_DOCUMENTATION "Build the documentation" OFF)
 option(SYCL_BLAS_ALWAYS_INLINE "Setting always inline attribute for all kernels" ON)
+option(DOUBLE_SUPPORT "Disable double support when testing." OFF)
+option(NAIVE_GEMM "Default to naive GEMM implementations" OFF)
+set(TARGET "DEFAULT_CPU" CACHE STRING "Defines the platform for which the sycl library is built")
+set_property(CACHE TARGET PROPERTY STRINGS
+    DEFAULT_CPU INTEL_GPU AMD_GPU ARM_GPU RCAR ARM_GPU)
 
-add_subdirectory(src)
-#shared lib
-build_library(sycl_blas SHARED)
-target_include_directories(sycl_blas PUBLIC ${SYCLBLAS_INCLUDE} ${THIRD_PARTIES_INCLUDE})
-set_target_properties(sycl_blas PROPERTIES VERSION ${PROJECT_VERSION})
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+include("${CMAKE_BINARY_DIR}/conan_paths.cmake" OPTIONAL)
+include(CTest)
 
-install(TARGETS sycl_blas
-LIBRARY DESTINATION sycl_blas/lib
+add_subdirectory(external)
+find_package(ComputeCpp REQUIRED)
+
+list(APPEND COMPUTECPP_DEVICE_COMPILER_FLAGS
+    -O3
+    -fsycl-split-modules=20
+    -mllvm -inline-threshold=10000
+    -no-serial-memop
+    -Xclang -cl-mad-enable
 )
 
-option(BLAS_ENABLE_STATIC_LIBRARY "Whether to enable STATIC LIBRARY" OFF)
-
-#static_lib
-if(BLAS_ENABLE_STATIC_LIBRARY)
-build_library(sycl_blas_static STATIC)
-install(TARGETS sycl_blas_static
-ARCHIVE DESTINATION sycl_blas/lib
+add_library(sycl-blas-header-only INTERFACE)
+add_library(codeplay::sycl-blas-header-only ALIAS sycl-blas-header-only)
+target_include_directories(sycl-blas-header-only INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
+
+install(TARGETS sycl-blas-header-only
+    EXPORT SYCLBlasTargets
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+)
+
+add_subdirectory(src bin)
+add_subdirectory(tools)
+
+if(BUILD_BENCHMARKS)
+    add_subdirectory(benchmark)
+endif()
+if(BUILD_TESTING)
+    add_subdirectory(test)
 endif()
 
-install(DIRECTORY ${SYCLBLAS_INCLUDE} DESTINATION sycl_blas
-        FILES_MATCHING PATTERN "*.h")
+export(EXPORT SYCLBlasTargets
+  FILE "${PROJECT_BINARY_DIR}/sycl-blas-targets.cmake"
+  NAMESPACE codeplay::)
+configure_file(cmake/sycl-blas-config.cmake
+    "${PROJECT_BINARY_DIR}/sycl-blas-config.cmake"
+    COPYONLY)
 
-option(BLAS_ENABLE_TESTING "Whether to enable testing" ON)
-
-if(${BLAS_ENABLE_TESTING})
-  enable_testing()
-  add_subdirectory(test)
-endif()
-
-option(BLAS_ENABLE_BENCHMARK "Whether to enable benchmarking" ON)
-option(BUILD_CLBLAST_BENCHMARKS "Whether to build CLBLAST benchmarks" OFF)
-
-if(${BLAS_ENABLE_BENCHMARK})
-  add_subdirectory(benchmark)
-endif()
+set(config_package_location lib/cmake/SYCL-BLAS)
+install(DIRECTORY include/
+	    DESTINATION include/sycl-blas
+		COMPONENT Devel)
+install(EXPORT SYCLBlasTargets
+  FILE sycl-blas-targets.cmake
+  NAMESPACE codeplay::
+  DESTINATION ${config_package_location})
+install(
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/sycl-blas-config.cmake
+  DESTINATION ${config_package_location}
+  COMPONENT Devel)

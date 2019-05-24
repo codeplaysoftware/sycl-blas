@@ -22,6 +22,7 @@
  *  @filename rotg.cpp.in
  *
  **************************************************************************/
+
 #include "container/sycl_iterator.hpp"
 #include "executors/executor_sycl.hpp"
 #include "executors/kernel_constructor.hpp"
@@ -34,13 +35,22 @@
 namespace blas {
 namespace internal {
 
+{% for policy in policy_types -%}
+{% for index in index_types -%}
+{% for data in data_types -%}
+
 /**
  * ROTG.
  * @brief Constructs given plane rotation
  * Not implemented.
  * template <>
- * void _rotg(${DATA_TYPE} &_alpha, ${DATA_TYPE} &_beta, ${DATA_TYPE} &_cos,
- *${DATA_TYPE} &_sin);
+ * void _rotg({{data}} &_alpha, {{data}} &_beta, {{data}} &_cos,
+ *{{data}} &_sin);
  **/
+
+{% endfor -%}
+{% endfor -%}
+{% endfor -%}
+
 }  // namespace internal
 }  // namespace blas

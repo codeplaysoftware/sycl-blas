@@ -26,9 +26,9 @@
 #ifndef SYSTEM_REFERENCE_BLAS_HPP
 #define SYSTEM_REFERENCE_BLAS_HPP
 
-#include "cblas.h"
-#include <iostream>
+#include <cblas.h>
 #include <cmath>
+#include <iostream>
 
 namespace {
 CBLAS_TRANSPOSE c_trans(char x) {
@@ -70,16 +70,17 @@ CBLAS_DIAG c_diag(char x) {
     case 'n':
     case 'N':
       return CblasNonUnit;
+    default:
+      assert(!"unknown case");
   }
 }
 
 // i*amin is an extension, provide an implementation
-template<typename scalar_t>
-inline int iamin(const int N, const scalar_t *X, const int incX)
-{
+template <typename scalar_t>
+inline int iamin(const int N, const scalar_t *X, const int incX) {
   int best = 0;
-  for(int i = incX; i < N * incX; i += incX) {
-    if(std::abs(X[i]) < std::abs(X[best])) {
+  for (int i = incX; i < N * incX; i += incX) {
+    if (std::abs(X[i]) < std::abs(X[best])) {
       best = i;
     }
   }
@@ -158,8 +159,8 @@ int iamax(const int n, const scalar_t x[], const int incX) {
 
 template <typename scalar_t>
 int iamin(const int n, const scalar_t x[], const int incX) {
-  return TypeDispatcher<scalar_t>::template call<int>(
-      &isamin, &idamin, n, x, incX);
+  return TypeDispatcher<scalar_t>::template call<int>(&isamin, &idamin, n, x,
+                                                      incX);
 }
 
 template <typename scalar_t>

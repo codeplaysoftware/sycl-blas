@@ -22,8 +22,5 @@
 # *  @filename CMakeLists.txt
 # *
 # **************************************************************************/
-add_subdirectory(blas1)
-add_subdirectory(blas2)
-add_subdirectory(blas3)
 
-
+# add_subdirectory(auto_tuner)
