@@ -37,7 +37,9 @@ if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 endif()
 
 set(BUILD_SHARED_LIBS ON CACHE BOOL "")
-set(CMAKE_CXX_STANDARD 11)
+if(NOT "${CMAKE_CXX_STANDARD}")
+  set(CMAKE_CXX_STANDARD 11)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ${BUILD_SHARED_LIBS})
@@ -124,6 +126,8 @@ if (WIN32)
     target_link_libraries(sycl_blas PRIVATE ComputeCpp::ComputeCpp)
   elseif(is_dpcpp)
     target_link_libraries(sycl_blas PRIVATE DPCPP::DPCPP)
+  elseif(is_hipsycl)
+    target_link_libraries(sycl_blas PRIVATE hipSYCL::hipSYCL-rt)
   endif()
 endif()
 if(is_computecpp)
@@ -136,6 +140,13 @@ elseif(is_dpcpp)
   set_target_properties(sycl_blas PROPERTIES
     VERSION ${PROJECT_VERSION}
     INTERFACE_LINK_LIBRARIES DPCPP::DPCPP
+    INTERFACE_INCLUDE_DIRECTORIES "${SYCLBLAS_INCLUDE};${COMPUTECPP_SDK_INCLUDE};${SYCL_INCLUDE_DIRS}"
+  )
+  add_sycl_to_target(TARGET sycl_blas SOURCES)
+elseif(is_hipsycl)
+  set_target_properties(sycl_blas PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    INTERFACE_LINK_LIBRARIES hipSYCL::hipSYCL-rt
     INTERFACE_INCLUDE_DIRECTORIES "${SYCLBLAS_INCLUDE};${COMPUTECPP_SDK_INCLUDE};${SYCL_INCLUDE_DIRS}"
   )
   add_sycl_to_target(TARGET sycl_blas SOURCES)
@@ -166,9 +177,14 @@ install(DIRECTORY ${SYCLBLAS_INCLUDE}/
 option(BLAS_ENABLE_TESTING "Whether to enable testing" ON)
 option(ENABLE_EXPRESSION_TESTS "Whether to build expression tree fusion tests" OFF)
 # Header-only tests
-option(BLAS_HEADER_ONLY_TESTING "Whether to use sycl-blas testing in header-only mode" OFF)
-if(BLAS_HEADER_ONLY_TESTING)
-  add_definitions(-DBLAS_HEADER_ONLY_TESTING)
+option(BLAS_HEADER_ONLY "Whether to use sycl-blas testing in header-only mode" OFF)
+if(BLAS_HEADER_ONLY)
+  add_definitions(-DBLAS_HEADER_ONLY)
+endif()
+# Enable first kernel in queue constructor
+option(ENQUEUE_FIRST_KERNEL "Whether to enqueue dummy kernel in queue constructor" OFF)
+if(ENQUEUE_FIRST_KERNEL)
+  add_definitions(-DENQUEUE_FIRST_KERNEL)
 endif()
 
 if(${BLAS_ENABLE_TESTING})

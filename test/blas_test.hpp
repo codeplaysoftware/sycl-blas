@@ -37,7 +37,7 @@
 
 #include <gtest/gtest.h>
 
-#ifdef BLAS_HEADER_ONLY_TESTING
+#ifdef BLAS_HEADER_ONLY
 #include <sycl_blas.hpp>
 #else
 #include <sycl_blas.h>
@@ -47,8 +47,7 @@
 #include <common/float_comparison.hpp>
 #include <common/print_queue_information.hpp>
 #include <common/system_reference_blas.hpp>
-
-#include <utils/quantization.hpp>
+#include <common/quantization.hpp>
 #include "blas_test_macros.hpp"
 
 struct Args {
@@ -68,16 +67,7 @@ using test_executor_t =
  * using the default device if not specified.
  */
 inline cl::sycl::queue make_queue_impl() {
-  std::unique_ptr<cl::sycl::device_selector> selector;
-  if (args.device.empty()) {
-    selector = std::unique_ptr<cl::sycl::device_selector>(
-        new cl::sycl::default_selector());
-  } else {
-    selector = std::unique_ptr<cl::sycl::device_selector>(
-        new utils::cli_device_selector(args.device));
-  }
-
-  auto q = cl::sycl::queue(*selector, [=](cl::sycl::exception_list eL) {
+  auto async_handler = [=](cl::sycl::exception_list eL) {
     for (auto &e : eL) {
       try {
         std::rethrow_exception(e);
@@ -89,7 +79,28 @@ inline cl::sycl::queue make_queue_impl() {
         std::cout << "An exception " << std::endl;
       }
     }
-  });
+  };
+
+#if SYCL_LANGUAGE_VERSION >= 202002
+  std::function<int(const cl::sycl::device&)> selector;
+  if (args.device.empty()) {
+    selector = cl::sycl::default_selector_v;
+  } else {
+    selector = utils::cli_device_selector(args.device);
+  }
+  auto q = cl::sycl::queue(selector, async_handler);
+
+#else
+  std::unique_ptr<cl::sycl::device_selector> selector;
+  if (args.device.empty()) {
+    selector = std::unique_ptr<cl::sycl::device_selector>(
+        new cl::sycl::default_selector());
+  } else {
+    selector = std::unique_ptr<cl::sycl::device_selector>(
+        new utils::cli_device_selector(args.device));
+  }
+  auto q = cl::sycl::queue(*selector, async_handler);
+#endif  // HAS_SYCL2020_SELECTORS
 
   utils::print_queue_information(q);
   return q;
